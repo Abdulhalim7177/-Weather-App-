@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    /* No custom Tailwind configuration used */
+    #map {
+      height: 300px; /* Set a fixed height for the map */
+      border-radius: 0.5rem; /* Rounded corners */
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+  <!-- Header Section -->
+  <header class="bg-blue-900 text-white py-6">
+    <h1 class="text-3xl text-center font-bold">Weather Dashboard</h1>
+  </header>
+
+  <!-- Main Weather Container -->
+  <main class="max-w-6xl mx-auto mt-8 px-4">
+
+    <!-- City Input Section -->
+    <div class="text-center mb-6">
+      <input 
+        type="text" 
+        id="city-input" 
+        placeholder="Enter city name" 
+        class="border border-gray-300 rounded-lg py-2 px-4 text-gray-700 w-64"
+      />
+      <button id="get-city-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300">
+        Get Weather
+      </button>
+      <button id="get-location-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-300 ml-2">
+        Get My Location
+      </button>
+    </div>
+
+    <!-- Today's Weather Section -->
+    <section id="today-weather" class="bg-white p-6 rounded-lg shadow-md mb-8 transition-shadow duration-300 hover:shadow-lg">
+      <h2 class="text-2xl font-semibold">Today's Weather</h2>
+      <div class="flex flex-col md:flex-row justify-between items-center mt-4">
+        <div id="today-icon" class="w-24 h-24"></div>
+        <div class="text-center md:text-left md:ml-6">
+          <p id="today-temp" class="text-5xl font-bold"></p>
+          <p id="today-desc" class="text-lg capitalize"></p>
+          <p id="today-location" class="text-gray-500 text-sm mt-2"></p>
+          <div class="mt-4 grid grid-cols-2 gap-4 text-gray-700 text-sm">
+            <p id="today-humidity">Humidity: --%</p>
+            <p id="today-wind">Wind: -- km/h</p>
+            <p id="today-pressure">Pressure: -- hPa</p>
+            <p id="today-visibility">Visibility: -- km</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Weather Forecast Section -->
+    <section id="forecast" class="bg-white p-6 rounded-lg shadow-md transition-shadow duration-300 hover:shadow-lg">
+      <h2 class="text-2xl font-semibold">5-Day Forecast</h2>
+      <div id="forecast-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mt-4">
+        <!-- Forecast Cards will be injected here -->
+      </div>
+    </section>
+
+    <!-- Map Section -->
+    <section id="map-section" class="bg-white p-6 rounded-lg shadow-md mb-8">
+      <h2 class="text-2xl font-semibold">Location Map</h2>
+      <div id="map"></div>
+    </section>
+
+  </main>
+
+  <!-- Footer Section -->
+  <footer class="bg-blue-900 text-white py-4 text-center mt-8">
+    <p>© 2024 Weather Dashboard</p>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // API Key and URL
+    const apiKey = '301d88cfa61f6365b9de06604abd3193';
+    const baseUrl = 'https://api.openweathermap.org/data/2.5/';
+
+    // DOM Elements
+    const todayTemp = document.getElementById('today-temp');
+    const todayDesc = document.getElementById('today-desc');
+    const todayLocation = document.getElementById('today-location');
+    const todayIcon = document.getElementById('today-icon');
+    const todayHumidity = document.getElementById('today-humidity');
+    const todayWind = document.getElementById('today-wind');
+    const todayPressure = document.getElementById('today-pressure');
+    const todayVisibility = document.getElementById('today-visibility');
+    const forecastList = document.getElementById('forecast-list');
+    const getCityBtn = document.getElementById('get-city-btn');
+    const getLocationBtn = document.getElementById('get-location-btn');
+    const cityInput = document.getElementById('city-input');
+
+    // Initialize the map
+    const map = L.map('map').setView([0, 0], 2); // Default view (world map)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    let marker; // Variable to store the marker
+
+    // Function to place a marker at a clicked location
+    map.on('click', function(e) {
+      if (marker) {
+        map.removeLayer(marker); // Remove the previous marker
+      }
+      const { lat, lng } = e.latlng;
+      marker = L.marker([lat, lng]).addTo(map); // Place a new marker
+      getWeatherDataByCoordinates(lat, lng); // Fetch weather data for the clicked location
+    });
+
+    // Function to fetch weather data by coordinates
+    async function getWeatherDataByCoordinates(lat, lon) {
+      try {
+        const response = await fetch(`${baseUrl}weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
+        const data = await response.json();
+
+        // Check for errors
+        if (data.cod !== 200) {
+          alert('Unable to retrieve weather data for this location.');
+          return;
+        }
+
+        // Populate today's weather data
+        todayTemp.innerText = `${Math.round(data.main.temp)}°C`;
+        todayDesc.innerText = data.weather[0].description;
+        todayLocation.innerText = `${data.name}, ${data.sys.country}`;
+        todayIcon.innerHTML = `<img src="https://openweathermap.org/img/wn/${data.weather[0].icon}@4x.png" alt="${data.weather[0].description}" class="w-24 h-24">`;
+        todayHumidity.innerText = `Humidity: ${data.main.humidity}%`;
+        todayWind.innerText = `Wind: ${data.wind.speed} km/h`;
+        todayPressure.innerText = `Pressure: ${data.main.pressure} hPa`;
+        todayVisibility.innerText = `Visibility: ${data.visibility / 1000} km`;
+
+        // Update the map with the current location
+        updateMap(lat, lon);
+
+        // Fetch the 5-day forecast for the coordinates
+        getWeatherForecast(data.name);
+      } catch (error) {
+        console.error('Error fetching weather data:', error);
+      }
+    }
+
+    // Function to fetch 5-Day Weather Forecast
+    async function getWeatherForecast(city) {
+      try {
+        const response = await fetch(`${baseUrl}forecast?q=${city}&units=metric&appid=${apiKey}`);
+        const forecastData = await response.json();
+
+        // Check for errors
+        if (forecastData.cod !== "200") {
+          alert('Forecast data not found. Please try again.');
+          return;
+        }
+
+        // Clear previous forecast data
+        forecastList.innerHTML = '';
+
+        // Process the forecast data
+        const forecasts = forecastData.list.filter((entry, index) => index % 8 === 0); // Take one entry every 8 hours (3 hours interval)
+        forecasts.forEach(forecast => {
+          const date = new Date(forecast.dt * 1000);
+          const temp = Math.round(forecast.main.temp);
+          const description = forecast.weather[0].description;
+          const icon = forecast.weather[0].icon;
+
+          const forecastCard = `
+            <div class="bg-gray-100 p-4 rounded-lg shadow-md text-center">
+              <h3 class="text-lg font-semibold">${date.toLocaleDateString()}</h3>
+              <img src="https://openweathermap.org/img/wn/${icon}.png" alt="${description}" class="w-16 h-16 mx-auto">
+              <p class="text-2xl font-bold">${temp}°C</p>
+              <p class="text-gray-600 capitalize">${description}</p>
+            </div>
+          `;
+          forecastList.insertAdjacentHTML('beforeend', forecastCard);
+        });
+      } catch (error) {
+        console.error('Error fetching 5-day weather forecast:', error);
+      }
+    }
+
+    // Function to update the map with coordinates
+    function updateMap(lat, lon) {
+      map.setView([lat, lon], 13); // Zoom into the location
+      if (marker) {
+        map.removeLayer(marker); // Remove the previous marker if exists
+      }
+      marker = L.marker([lat, lon]).addTo(map); // Place a new marker
+    }
+
+    // Fetch weather data for a default city on page load
+    window.onload = () => {
+      const defaultCity = 'London'; // Default city
+      getWeatherData(defaultCity);
+    };
+
+    // Button Event Listeners
+    getCityBtn.addEventListener('click', () => {
+      const city = cityInput.value.trim();
+      if (city) {
+        getWeatherData(city);
+      } else {
+        alert('Please enter a city name.');
+      }
+    });
+
+    getLocationBtn.addEventListener('click', () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+          const { latitude, longitude } = position.coords;
+          getWeatherDataByCoordinates(latitude, longitude);
+          updateMap(latitude, longitude); // Update the map with the current location
+        }, () => {
+          alert('Unable to retrieve your location.');
+        });
+      } else {
+        alert('Geolocation is not supported by this browser.');
+      }
+    });
+  </script>
+</body>
+</html>
