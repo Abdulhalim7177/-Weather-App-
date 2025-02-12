@@ -48,6 +48,8 @@ async function getWeatherDataByCoordinates(lat, lon) {
       return;
     }
 
+    console.log(data);
+
     // Populate today's weather data
     todayTemp.innerText = `${Math.round(data.main.temp)}°C`;
     todayDesc.innerText = data.weather[0].description;
